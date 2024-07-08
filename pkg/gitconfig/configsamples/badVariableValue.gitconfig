@@ -1,0 +1,2 @@
+[foo] # section name can only contains alphanumerical character and '-'
+	bar = baz  \ # '\' indicates that the value continues on the next line, there MUST NOT be any character after '\'

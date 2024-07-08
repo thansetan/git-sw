@@ -1,0 +1,2 @@
+[fo!o] # section name can only contain alphanumeric characters and '-'
+	bar = baz

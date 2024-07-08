@@ -1,0 +1,17 @@
+[foo]
+	bar = "this is a value" \
+"that spans multiple lines"
+[safe]
+	directory = /home/uwu/owo
+	directory = /home/foo/bar
+	directory = /home/johndoe/foobar
+	directory = "/home/johndoe/barfoo"
+[boo]
+	boo = "C:\\Users\\User\\Desktop\\" # this is a comment
+[credential "helperselector"]
+	selected = manager
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+[credential]
+	helper = manager
+	test = "a tab\t a newline\n a backslash \\ a double quote \" a backspace \b" ; a comment

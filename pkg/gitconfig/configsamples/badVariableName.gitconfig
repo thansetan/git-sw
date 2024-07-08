@@ -1,0 +1,2 @@
+[foo]
+	1bar = baz  # variable name must start with an alphabetic character
