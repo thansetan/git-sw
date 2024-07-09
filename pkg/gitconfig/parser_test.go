@@ -16,16 +16,14 @@ func TestParse(t *testing.T) {
 		err           error
 	)
 	testcases := []struct {
-		expectedError *ParseError
-		name          string
-		configPath    string
-		wantErr       bool
+		name       string
+		wantErr    error
+		configPath string
 	}{
 		{
 			name:       "bad section name",
 			configPath: "configsamples/badSectionName.gitconfig",
-			wantErr:    true,
-			expectedError: &ParseError{
+			wantErr: &ParseError{
 				Err:        ErrInvalidSection,
 				LineNumber: 1,
 				Line:       "[fo!o] # section name can only contain alphanumeric characters and '-'",
@@ -34,8 +32,7 @@ func TestParse(t *testing.T) {
 		{
 			name:       "bad variable name",
 			configPath: "configsamples/badVariableName.gitconfig",
-			wantErr:    true,
-			expectedError: &ParseError{
+			wantErr: &ParseError{
 				Err:        ErrInvalidLine,
 				LineNumber: 2,
 				Line:       "	1bar = baz  # variable name must start with an alphabetic character",
@@ -44,8 +41,7 @@ func TestParse(t *testing.T) {
 		{
 			name:       "bad variable value",
 			configPath: "configsamples/badVariableValue.gitconfig",
-			wantErr:    true,
-			expectedError: &ParseError{
+			wantErr: &ParseError{
 				Err:        ErrInvalidVariableValue,
 				LineNumber: 2,
 				Line:       `	bar = baz  \ # '\' indicates that the value continues on the next line, there MUST NOT be any character after '\'`,
@@ -64,22 +60,27 @@ func TestParse(t *testing.T) {
 				t.Fatalf("os.ReadFile(%s) error = %v, want = %v", tt.configPath, err, nil)
 			}
 			_, err = Parse(configContent)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Parse() error = %v, want = %v", err, tt.wantErr)
-			}
-			if tt.wantErr {
+			if tt.wantErr != err {
+				if tt.wantErr == nil {
+					t.Fatalf("Parse() error = %v, want = %T", err, tt.wantErr)
+				}
 				parseErr := new(ParseError)
 				if !errors.As(err, &parseErr) {
-					t.Fatalf("expected error to be %s, got %s", tt.expectedError, err)
+					t.Errorf("Parse() error = %v, want = %T", err, tt.wantErr)
 				}
-				if parseErr.LineNumber != tt.expectedError.LineNumber {
-					t.Errorf("expected error to be at line number %d, got number %d", tt.expectedError.LineNumber, parseErr.LineNumber)
+
+				ttwantErr := new(ParseError)
+				errors.As(tt.wantErr, &ttwantErr)
+
+				// check error values
+				if parseErr.LineNumber != ttwantErr.LineNumber {
+					t.Errorf("expected error to be at line number %d, got number %d", ttwantErr.LineNumber, parseErr.LineNumber)
 				}
-				if parseErr.Line != tt.expectedError.Line {
-					t.Errorf("expected error to be at line %s, got %s", tt.expectedError.Line, parseErr.Line)
+				if parseErr.Line != ttwantErr.Line {
+					t.Errorf("expected error to be at line %s, got %s", ttwantErr, parseErr.Line)
 				}
-				if !errors.Is(parseErr.Err, tt.expectedError.Err) {
-					t.Errorf("expected error to be %s, got %s", tt.expectedError.Err, parseErr.Err)
+				if !errors.Is(parseErr.Err, ttwantErr.Err) {
+					t.Errorf("expected error to be %s, got %s", ttwantErr, parseErr.Err)
 				}
 			}
 		})

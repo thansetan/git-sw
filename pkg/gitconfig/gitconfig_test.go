@@ -19,8 +19,8 @@ func TestGitConfig_Set(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		args    args
-		wantErr bool
 	}{
 		{
 			name: "Empty Value",
@@ -28,7 +28,7 @@ func TestGitConfig_Set(t *testing.T) {
 			args: args{
 				key: "foo.foo",
 			},
-			wantErr: true,
+			wantErr: ErrEmptyValue,
 		},
 		{
 			name: "Valid Key Single Value",
@@ -44,13 +44,13 @@ func TestGitConfig_Set(t *testing.T) {
 			name:    "Invalid Key Single Value",
 			g:       gitConfig,
 			args:    args{key: "foo", vals: []any{"bar"}},
-			wantErr: true,
+			wantErr: ErrInvalidKey,
 		},
 		{
 			name:    "Invalid Key Multiple Values",
 			g:       gitConfig,
 			args:    args{key: "foo", vals: []any{"bar", "baz"}},
-			wantErr: true,
+			wantErr: ErrInvalidKey,
 		},
 		{
 			name: "Key With Subsection Single Value",
@@ -83,7 +83,7 @@ func TestGitConfig_Set(t *testing.T) {
 				key:  "foo.1bar",
 				vals: []any{"baz"},
 			},
-			wantErr: true,
+			wantErr: ErrInvalidVariableName,
 		},
 		{
 			name: "Boolean Val",
@@ -108,12 +108,42 @@ func TestGitConfig_Set(t *testing.T) {
 				key:  "foo.invalidType",
 				vals: []any{nil, []int{1, 2, 3}, []any{"aa"}},
 			},
-			wantErr: true,
+			wantErr: ErrInvalidValueType,
+		},
+		{
+			name: "Invalid String Value",
+			g:    gitConfig,
+			args: args{
+				key:  "foo.invalidStringVal",
+				vals: []any{"C:\\Users\\foo\\bar"}, // will results in C:\Users\foo\bar which is invalid
+				// because '\' indicates that value continues at next line and there
+				// MUST NOT be any characters after '\'
+			},
+			wantErr: ErrInvalidVariableValue,
+		},
+		{
+			name: "Value Spans Multiple Lines",
+			g:    gitConfig,
+			args: args{
+				key: "foo.multilinevalue",
+				vals: []any{`foo\
+bar`},
+			},
+		},
+		{
+			name: "Char after '\\'",
+			g:    gitConfig,
+			args: args{
+				key: "foo.charAfter'\\'",
+				vals: []any{`foo\ 
+bar`}, // there's a space after '\'
+			},
+			wantErr: ErrInvalidVariableValue,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.g.Set(tt.args.key, tt.args.vals...); (err != nil) != tt.wantErr {
+			if err := tt.g.Set(tt.args.key, tt.args.vals...); !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.Set() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -128,8 +158,8 @@ func TestGitConfig_Add(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		args    args
-		wantErr bool
 	}{
 		{
 			name: "Add To Non-Existing Key",
@@ -150,7 +180,7 @@ func TestGitConfig_Add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.g.Add(tt.args.key, tt.args.vals...); (err != nil) != tt.wantErr {
+			if err := tt.g.Add(tt.args.key, tt.args.vals...); !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -164,9 +194,9 @@ func TestGitConfig_Get(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		want    Value
 		args    args
-		wantErr bool
 	}{
 		{
 			name: "Value Exists",
@@ -182,7 +212,7 @@ func TestGitConfig_Get(t *testing.T) {
 			args: args{
 				key: "foo.baz",
 			},
-			wantErr: true,
+			wantErr: ErrKeyNotFound,
 		},
 		{
 			name: "Get From Key With Multiple Values",
@@ -220,7 +250,7 @@ func TestGitConfig_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.g.Get(tt.args.key)
-			if (err != nil) != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -238,9 +268,9 @@ func TestGitConfig_GetAll(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		args    args
 		want    []Value
-		wantErr bool
 	}{
 		{
 			name: "Get Key With Single Value",
@@ -270,7 +300,7 @@ func TestGitConfig_GetAll(t *testing.T) {
 			args: args{
 				key: "foo.baz",
 			},
-			wantErr: true,
+			wantErr: ErrKeyNotFound,
 		},
 		{
 			name: "Get From Key With Subsection",
@@ -300,7 +330,7 @@ func TestGitConfig_GetAll(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := tt.g.GetAll(tt.args.key)
-			if (err != nil) != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.GetAll() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
@@ -318,8 +348,8 @@ func TestGitConfig_Unset(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		args    args
-		wantErr bool
 	}{
 		{
 			name: "Unset Existing Key",
@@ -334,12 +364,12 @@ func TestGitConfig_Unset(t *testing.T) {
 			args: args{
 				key: "foo.baz",
 			},
-			wantErr: true,
+			wantErr: ErrKeyNotFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.g.Unset(tt.args.key); (err != nil) != tt.wantErr {
+			if err := tt.g.Unset(tt.args.key); !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.Unset() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -357,8 +387,8 @@ func TestGitConfig_Save(t *testing.T) {
 	tests := []struct {
 		name    string
 		g       *GitConfig
+		wantErr error
 		args    args
-		wantErr bool
 	}{
 		{
 			name: "Save to a File",
@@ -370,7 +400,7 @@ func TestGitConfig_Save(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.g.Save(tt.args.path); (err != nil) != tt.wantErr {
+			if err := tt.g.Save(tt.args.path); !errors.Is(err, tt.wantErr) {
 				t.Errorf("GitConfig.Save() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -435,24 +465,24 @@ func TestNewSection(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
+		wantErr error
 		args    args
 		want    Section
-		wantErr bool
 	}{
 		{
 			name:    "both invalid",
 			args:    args{"w*w.aaaa\n"},
-			wantErr: true,
+			wantErr: ErrInvalidSection,
 		},
 		{
 			name:    "invalid section name without subsection",
 			args:    args{"foo?"},
-			wantErr: true,
+			wantErr: ErrInvalidSection,
 		},
 		{
 			name:    "invalid section name with subsection",
 			args:    args{"foo?.bar"},
-			wantErr: true,
+			wantErr: ErrInvalidSection,
 		},
 		{
 			name: "valid section without subsection",
@@ -464,7 +494,7 @@ func TestNewSection(t *testing.T) {
 		{
 			name:    "valid section with invalid subsection",
 			args:    args{"foo.bar\n"},
-			wantErr: true,
+			wantErr: ErrInvalidSubsection,
 		},
 		{
 			name: "valid all",
@@ -490,11 +520,6 @@ func TestNewSection(t *testing.T) {
 			},
 		},
 		{
-			name:    "newline character on subsection",
-			args:    args{"foo.bar\n"},
-			wantErr: true,
-		},
-		{
 			name: "escaped newline character on subsection",
 			args: args{"foo.bar\\n"},
 			want: Section{
@@ -506,7 +531,7 @@ func TestNewSection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewSection(tt.args.s)
-			if (err != nil) != tt.wantErr {
+			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("NewSection() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}

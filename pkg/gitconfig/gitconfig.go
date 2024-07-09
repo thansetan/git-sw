@@ -249,11 +249,11 @@ func (g *GitConfig) set(section Section, key VariableName, vals ...Value) {
 
 func (g *GitConfig) unset(section Section, key VariableName) error {
 	if !g.sectionExists(section) {
-		return ErrInvalidKey
+		return ErrKeyNotFound
 	}
 
 	if !g.keyExists(section, key) {
-		return ErrInvalidKey
+		return ErrKeyNotFound
 	}
 
 	if len(g.data[section]) == 1 {
