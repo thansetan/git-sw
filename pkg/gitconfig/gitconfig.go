@@ -84,7 +84,6 @@ func (val Value) String() string {
 
 	s, ok := val.v.(string)
 	if !ok {
-		fmt.Printf("%T (%v)\n", val.v, val.v)
 		return fmt.Sprintf("%v", val.v)
 	}
 
@@ -129,18 +128,49 @@ type GitConfig struct {
 	data map[Section]map[VariableName][]Value
 }
 
-func (GitConfig) isValidValues(values ...interface{}) bool {
-	for _, val := range values {
-		t := reflect.ValueOf(val)
+func (GitConfig) validateStringVal(s string) error {
+	var isQuoted bool
+
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' {
+			if i == len(s)-1 {
+				break
+			}
+			switch s[i+1] {
+			case '\\', '"':
+				i++
+				continue
+			case '\n', '\t', '\b':
+				continue
+			default:
+				return ErrInvalidVariableValue
+			}
+		}
+		if s[i] == '"' {
+			isQuoted = !isQuoted
+		}
+	}
+
+	return nil
+}
+
+func (g GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
+	values := make([]Value, 0, len(vals))
+	for i := range vals {
+		t := reflect.ValueOf(vals[i])
 		switch t.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
 			reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
-			reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64,
-			reflect.String, reflect.Bool:
+			reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.Bool:
+		case reflect.String:
+			err := g.validateStringVal(vals[i].(string))
+			if err != nil {
+				return nil, err
+			}
 		default:
-			return false
+			return nil, ErrInvalidValueType
 		}
-
+		values = append(values, Value{vals[i]})
 		// type assertion fails to catch local type
 		// switch val.(type) {
 		// case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, string, bool:
@@ -148,7 +178,7 @@ func (GitConfig) isValidValues(values ...interface{}) bool {
 		// 	return false
 		// }
 	}
-	return true
+	return values, nil
 }
 
 func (g GitConfig) sectionExists(section Section) bool {
@@ -235,14 +265,6 @@ func (g *GitConfig) unset(section Section, key VariableName) error {
 	return nil
 }
 
-func (GitConfig) toValues(vals ...interface{}) []Value {
-	values := make([]Value, 0, len(vals))
-	for i := range vals {
-		values = append(values, Value{vals[i]})
-	}
-	return values
-}
-
 // New creates a new GitConfig
 func New() *GitConfig {
 	return &GitConfig{
@@ -292,8 +314,9 @@ func (g *GitConfig) Set(key string, vals ...interface{}) error {
 		return ErrEmptyValue
 	}
 
-	if !g.isValidValues(vals...) {
-		return ErrInvalidValueType
+	values, err := g.isValidValues(vals...)
+	if err != nil {
+		return err
 	}
 
 	section, varName, err := g.splitKey(key)
@@ -301,7 +324,7 @@ func (g *GitConfig) Set(key string, vals ...interface{}) error {
 		return err
 	}
 
-	g.set(section, varName, g.toValues(vals...)...)
+	g.set(section, varName, values...)
 
 	return nil
 }
@@ -312,8 +335,9 @@ func (g *GitConfig) Add(key string, vals ...interface{}) error {
 		return ErrEmptyValue
 	}
 
-	if !g.isValidValues(vals...) {
-		return ErrInvalidValueType
+	values, err := g.isValidValues(vals...)
+	if err != nil {
+		return err
 	}
 
 	section, varName, err := g.splitKey(key)
@@ -321,7 +345,7 @@ func (g *GitConfig) Add(key string, vals ...interface{}) error {
 		return err
 	}
 
-	g.add(section, varName, g.toValues(vals...)...)
+	g.add(section, varName, values...)
 
 	return nil
 }
