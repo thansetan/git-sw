@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Section represents section name (and maybe subsection) of a config.
 type Section struct {
 	Name, Subsection string
 }
@@ -15,7 +16,7 @@ type Section struct {
 // Only alphanumeric characters and '-' are allowed for the section name.
 // To add a subsection, include a '.' after the section name.
 // Subsection names can contain any character except newline and null bytes.
-// Example: "url.git@github.com" results in Name = "git", Subsection = "git@github.com"
+// Example: "url.git@github.com" results in Name = "git", Subsection = "git@github.com".
 func NewSection(s string) (Section, error) {
 	var sec Section
 	ix := strings.Index(s, ".")
@@ -42,7 +43,7 @@ func (s Section) String() string {
 	return fmt.Sprintf("[%s \"%s\"]", s.Name, s.Subsection)
 }
 
-// DottedString joins section name and subsection with a dot (.)
+// DottedString joins section name and subsection with a dot (.).
 func (s Section) DottedString() string {
 	if len(s.Subsection) == 0 {
 		return s.Name
@@ -65,6 +66,7 @@ func (s Section) isValidSubsection() bool {
 	})
 }
 
+// VariableName represents config variable name.
 type VariableName string
 
 func (vn VariableName) isValid() bool {
@@ -73,10 +75,37 @@ func (vn VariableName) isValid() bool {
 	})
 }
 
+// Value represents value of a config variable.
 type Value struct{ v interface{} }
 
 func (val Value) Value() interface{} {
 	return val.v
+}
+
+// ValidateValue validates whether s is a valid value for .gitconfig or not.
+// .gitconfig values can contain any characters and may span multiple lines.
+// '\' indicates that the config value continues on the next line. There MUST NOT be
+// any characters after '\'. If '\' is needed as part of the value, it MUST be
+// escaped to '\\'.
+func ValidateValue(s string) error {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\\' {
+			if i == len(s)-1 {
+				break
+			}
+			switch s[i+1] {
+			case '\\', '"':
+				i++
+				continue
+			case '\n', '\t', '\b':
+				continue
+			default:
+				return ErrInvalidVariableValue
+			}
+		}
+	}
+
+	return nil
 }
 
 func (val Value) String() string {
@@ -128,33 +157,7 @@ type GitConfig struct {
 	data map[Section]map[VariableName][]Value
 }
 
-func (GitConfig) validateStringVal(s string) error {
-	var isQuoted bool
-
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\\' {
-			if i == len(s)-1 {
-				break
-			}
-			switch s[i+1] {
-			case '\\', '"':
-				i++
-				continue
-			case '\n', '\t', '\b':
-				continue
-			default:
-				return ErrInvalidVariableValue
-			}
-		}
-		if s[i] == '"' {
-			isQuoted = !isQuoted
-		}
-	}
-
-	return nil
-}
-
-func (g GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
+func (GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
 	values := make([]Value, 0, len(vals))
 	for i := range vals {
 		t := reflect.ValueOf(vals[i])
@@ -163,7 +166,7 @@ func (g GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
 			reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
 			reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.Bool:
 		case reflect.String:
-			err := g.validateStringVal(vals[i].(string))
+			err := ValidateValue(vals[i].(string))
 			if err != nil {
 				return nil, err
 			}
@@ -265,7 +268,7 @@ func (g *GitConfig) unset(section Section, key VariableName) error {
 	return nil
 }
 
-// New creates a new GitConfig
+// New creates a new GitConfig.
 func New() *GitConfig {
 	return &GitConfig{
 		data: make(map[Section]map[VariableName][]Value),

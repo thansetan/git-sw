@@ -25,6 +25,7 @@ func displayCreateForm() (Profile, error) {
 		profile Profile
 		err     error
 	)
+	profile.Config = gitconfig.New()
 
 	profileNamePrompt := promptui.Prompt{
 		Label: "Name",
@@ -46,8 +47,18 @@ func displayCreateForm() (Profile, error) {
 	}
 
 	gitNamePrompt := promptui.Prompt{
-		Label:    "Git Username",
-		Validate: validateNotEmpty,
+		Label: "Git Username",
+		Validate: func(s string) error {
+			err := validateNotEmpty(s)
+			if err != nil {
+				return err
+			}
+			err = gitconfig.ValidateValue(s)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
 	}
 
 	gitEmailPrompt := promptui.Prompt{
@@ -60,6 +71,10 @@ func displayCreateForm() (Profile, error) {
 			_, err = mail.ParseAddress(s)
 			if err != nil {
 				return ErrInvalidEmail
+			}
+			err = gitconfig.ValidateValue(s)
+			if err != nil {
+				return err
 			}
 			return nil
 		},
@@ -75,7 +90,6 @@ func displayCreateForm() (Profile, error) {
 		Items:    gpgFormat,
 		HideHelp: true,
 	}
-	profile.Config = gitconfig.New()
 
 	profile.Name, err = profileNamePrompt.Run()
 	if err != nil {
@@ -197,10 +211,23 @@ func displayDeleteConfirmation() bool {
 
 func getSigningKeyPrompt(keyFormat GPGFormat) *promptui.Prompt {
 	prompt := new(promptui.Prompt)
+
 	switch keyFormat {
 	case OPENPGP:
 		prompt.Label = "Enter your GPG key"
-		prompt.Validate = validateNotEmpty
+		prompt.Validate = func(s string) error {
+			err := validateNotEmpty(s)
+			if err != nil {
+				return err
+			}
+
+			err = gitconfig.ValidateValue(s)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
 	case SSH:
 		prompt.Label = "Enter path to your public key"
 		prompt.Validate = func(s string) error {
@@ -208,6 +235,12 @@ func getSigningKeyPrompt(keyFormat GPGFormat) *promptui.Prompt {
 			if err != nil {
 				return err
 			}
+
+			err = gitconfig.ValidateValue(s)
+			if err != nil {
+				return err
+			}
+
 			if filepath.Ext(s) != ".pub" {
 				return ErrInvalidPublicKeyExt
 			}
@@ -221,10 +254,21 @@ func getSigningKeyPrompt(keyFormat GPGFormat) *promptui.Prompt {
 			}
 			return nil
 		}
-
 	case X509:
 		prompt.Label = "Enter your certificate ID"
-		prompt.Validate = validateNotEmpty
+		prompt.Validate = func(s string) error {
+			err := validateNotEmpty(s)
+			if err != nil {
+				return err
+			}
+
+			err = gitconfig.ValidateValue(s)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
 	}
 	return prompt
 }
