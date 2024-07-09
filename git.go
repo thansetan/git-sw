@@ -57,14 +57,13 @@ func applyConfig(configPath string, isGlobal bool) error {
 func getCurrentConfig() (string, error) {
 	var cmd *exec.Cmd
 	if !isGlobal && isGitDirectory() {
-		cmd = exec.Command("git", "config", "--get", "include.path", fmt.Sprintf("%s.*gitconfig$", saveDirName))
+		cmd = exec.Command("git", "config", "--worktree", "--get", "include.path", fmt.Sprintf("%s.*gitconfig$", saveDirName))
 	} else {
 		cmd = exec.Command("git", "config", "--global", "--get", "include.path", fmt.Sprintf("%s.*gitconfig$", saveDirName))
 	}
 	gitOutput, err := cmd.CombinedOutput()
 	if err != nil && cmd.ProcessState.ExitCode() != 1 {
-		fmt.Println(string(gitOutput))
-		fmt.Println(cmd.String())
+		fmt.Printf("git: %s", string(gitOutput))
 		return "", err
 	}
 	return string(gitOutput), nil
