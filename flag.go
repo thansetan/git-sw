@@ -34,6 +34,6 @@ func parseFlag() {
 		fmt.Fprint(flag.CommandLine.Output(), sb.String())
 		flag.PrintDefaults()
 	}
-	flag.BoolVar(&isGlobal, "g", false, "whether to run the command globally (can only be used with the 'use', 'edit', and 'delete' commands).")
+	flag.BoolVar(&isGlobal, "g", false, "Run the command globally (can only be used with the 'use', 'edit', and 'delete' commands).")
 	flag.Parse()
 }
