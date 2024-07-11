@@ -388,7 +388,7 @@ func (g GitConfig) Save(path string) error {
 		for j := range variables {
 			values := g.data.mustGet(sections[i]).mustGet(variables[j])
 			for k := range values {
-				_, err = f.WriteString(fmt.Sprintf("\t%s = %s\n", variables[j], values[k]))
+				_, err = f.WriteString(fmt.Sprintf("\t%s = %s\n", variables[j], values[k].Value()))
 				if err != nil {
 					return err
 				}
