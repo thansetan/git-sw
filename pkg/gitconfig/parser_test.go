@@ -3,7 +3,6 @@ package gitconfig
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -99,19 +98,16 @@ func TestParsedValue(t *testing.T) {
 		t.Fatalf("Parse error = %v, want %v", err, nil)
 	}
 
-	for section := range parsed.data {
-		keyval := parsed.data[section]
-		for key := range keyval {
-			keyStr := fmt.Sprintf("%s.%s", section.DottedString(), key)
-			originalValue := getOriginalValue(keyStr)
-			parsedValue, err := parsed.GetAll(keyStr)
-			if err != nil {
-				t.Errorf("Parsed.GetAll(%s) error = %v, want %v", keyStr, err, nil)
-			}
-			parsedValueStr := join(parsedValue)
-			if originalValue != parsedValueStr {
-				t.Errorf("%s = %s, want %s", keyStr, parsedValueStr, originalValue)
-			}
+	for _, key := range parsed.Keys() {
+		keyStr := key.String()
+		originalValue := getOriginalValue(keyStr)
+		parsedValue, err := parsed.GetAll(keyStr)
+		if err != nil {
+			t.Errorf("Parsed.GetAll(%s) error = %v, want %v", keyStr, err, nil)
+		}
+		parsedValueStr := join(parsedValue)
+		if originalValue != parsedValueStr {
+			t.Errorf("%s = %s, want %s", keyStr, parsedValueStr, originalValue)
 		}
 	}
 }

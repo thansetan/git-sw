@@ -154,7 +154,7 @@ func (val Value) String() string {
 //
 //	add a slice to store the keys ??
 type GitConfig struct {
-	data map[Section]map[VariableName][]Value
+	data *orderedMap[Section, *orderedMap[VariableName, []Value]]
 }
 
 func (GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
@@ -185,12 +185,12 @@ func (GitConfig) isValidValues(vals ...interface{}) ([]Value, error) {
 }
 
 func (g GitConfig) sectionExists(section Section) bool {
-	_, ok := g.data[section]
+	_, ok := g.data.get(section)
 	return ok
 }
 
 func (g GitConfig) keyExists(section Section, key VariableName) bool {
-	_, ok := g.data[section][key]
+	_, ok := g.data.MustGet(section).get(key)
 	return ok
 }
 
@@ -222,47 +222,46 @@ func (g GitConfig) get(section Section, key VariableName) ([]Value, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	return g.data[section][key], nil
+	return g.data.MustGet(section).MustGet(key), nil
 }
 
-func (g *GitConfig) add(section Section, key VariableName, vals ...Value) {
+func (g *GitConfig) add(section Section, name VariableName, vals ...Value) {
 	if !g.sectionExists(section) {
-		g.data[section] = make(map[VariableName][]Value)
+		g.data.put(section, newOrderedMap[VariableName, []Value]())
 	}
 
-	if !g.keyExists(section, key) {
-		g.data[section][key] = make([]Value, 0)
+	if !g.keyExists(section, name) {
+		g.data.MustGet(section).put(name, make([]Value, 0))
 	}
 
-	g.data[section][key] = append(g.data[section][key], vals...)
-
+	g.data.MustGet(section).mustGetNode(name).val.val = append(g.data.MustGet(section).MustGet(name), vals...)
 }
 
-func (g *GitConfig) set(section Section, key VariableName, vals ...Value) {
+func (g *GitConfig) set(section Section, name VariableName, vals ...Value) {
 	if !g.sectionExists(section) {
-		g.data[section] = make(map[VariableName][]Value)
+		g.data.put(section, newOrderedMap[VariableName, []Value]())
 	}
 
-	if !g.keyExists(section, key) {
-		g.data[section][key] = make([]Value, 0)
+	if !g.keyExists(section, name) {
+		g.data.MustGet(section).put(name, make([]Value, 0))
 	}
 
-	g.data[section][key] = vals
+	g.data.MustGet(section).put(name, vals)
 }
 
-func (g *GitConfig) unset(section Section, key VariableName) error {
+func (g *GitConfig) unset(section Section, name VariableName) error {
 	if !g.sectionExists(section) {
 		return ErrKeyNotFound
 	}
 
-	if !g.keyExists(section, key) {
+	if !g.keyExists(section, name) {
 		return ErrKeyNotFound
 	}
 
-	if len(g.data[section]) == 1 {
-		delete(g.data, section)
+	if g.data.MustGet(section).len() == 1 {
+		g.data.remove(section)
 	} else {
-		delete(g.data[section], key)
+		g.data.MustGet(section).remove(name)
 	}
 
 	return nil
@@ -271,7 +270,7 @@ func (g *GitConfig) unset(section Section, key VariableName) error {
 // New creates a new GitConfig.
 func New() *GitConfig {
 	return &GitConfig{
-		data: make(map[Section]map[VariableName][]Value),
+		data: newOrderedMap[Section, *orderedMap[VariableName, []Value]](),
 	}
 }
 
@@ -385,4 +384,26 @@ func (g GitConfig) Save(path string) error {
 	}
 
 	return nil
+}
+
+type Key struct {
+	Section Section
+	Name    VariableName
+}
+
+func (k Key) String() string {
+	return fmt.Sprintf("%s.%s", k.Section.DottedString(), k.Name)
+}
+
+func (g GitConfig) Keys() []Key {
+	keys := make([]Key, 0)
+
+	for _, section := range g.data.Keys() {
+		keys = append(keys, make([]Key, 0, g.data.len())...)
+		for _, name := range g.data.MustGet(section).Keys() {
+			keys = append(keys, Key{section, name})
+		}
+	}
+
+	return keys
 }
