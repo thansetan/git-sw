@@ -190,7 +190,7 @@ func (g GitConfig) sectionExists(section Section) bool {
 }
 
 func (g GitConfig) keyExists(section Section, key VariableName) bool {
-	_, ok := g.data.MustGet(section).get(key)
+	_, ok := g.data.mustGet(section).get(key)
 	return ok
 }
 
@@ -222,7 +222,7 @@ func (g GitConfig) get(section Section, key VariableName) ([]Value, error) {
 		return nil, ErrKeyNotFound
 	}
 
-	return g.data.MustGet(section).MustGet(key), nil
+	return g.data.mustGet(section).mustGet(key), nil
 }
 
 func (g *GitConfig) add(section Section, name VariableName, vals ...Value) {
@@ -231,10 +231,10 @@ func (g *GitConfig) add(section Section, name VariableName, vals ...Value) {
 	}
 
 	if !g.keyExists(section, name) {
-		g.data.MustGet(section).put(name, make([]Value, 0))
+		g.data.mustGet(section).put(name, make([]Value, 0))
 	}
 
-	g.data.MustGet(section).mustGetNode(name).val.val = append(g.data.MustGet(section).MustGet(name), vals...)
+	g.data.mustGet(section).mustGetNode(name).val.val = append(g.data.mustGet(section).mustGet(name), vals...)
 }
 
 func (g *GitConfig) set(section Section, name VariableName, vals ...Value) {
@@ -243,10 +243,10 @@ func (g *GitConfig) set(section Section, name VariableName, vals ...Value) {
 	}
 
 	if !g.keyExists(section, name) {
-		g.data.MustGet(section).put(name, make([]Value, 0))
+		g.data.mustGet(section).put(name, make([]Value, 0))
 	}
 
-	g.data.MustGet(section).put(name, vals)
+	g.data.mustGet(section).put(name, vals)
 }
 
 func (g *GitConfig) unset(section Section, name VariableName) error {
@@ -258,10 +258,10 @@ func (g *GitConfig) unset(section Section, name VariableName) error {
 		return ErrKeyNotFound
 	}
 
-	if g.data.MustGet(section).len() == 1 {
+	if g.data.mustGet(section).len() == 1 {
 		g.data.remove(section)
 	} else {
-		g.data.MustGet(section).remove(name)
+		g.data.mustGet(section).remove(name)
 	}
 
 	return nil
@@ -378,9 +378,22 @@ func (g GitConfig) Save(path string) error {
 	}
 	defer f.Close()
 
-	err = gitConfigTemplate.Execute(f, g.data)
-	if err != nil {
-		return err
+	sections := g.data.keys()
+	for i := range sections {
+		_, err = f.WriteString(fmt.Sprintf("%s\n", sections[i]))
+		if err != nil {
+			return err
+		}
+		variables := g.data.mustGet(sections[i]).keys()
+		for j := range variables {
+			values := g.data.mustGet(sections[i]).mustGet(variables[j])
+			for k := range values {
+				_, err = f.WriteString(fmt.Sprintf("\t%s = %s\n", variables[j], values[k]))
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil
@@ -398,9 +411,9 @@ func (k Key) String() string {
 func (g GitConfig) Keys() []Key {
 	keys := make([]Key, 0)
 
-	for _, section := range g.data.Keys() {
+	for _, section := range g.data.keys() {
 		keys = append(keys, make([]Key, 0, g.data.len())...)
-		for _, name := range g.data.MustGet(section).Keys() {
+		for _, name := range g.data.mustGet(section).keys() {
 			keys = append(keys, Key{section, name})
 		}
 	}

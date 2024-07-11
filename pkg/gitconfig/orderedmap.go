@@ -57,7 +57,7 @@ func (o *orderedMap[K, V]) get(key K) (V, bool) {
 	return node.val.val, ok
 }
 
-func (o *orderedMap[K, V]) MustGet(key K) V {
+func (o *orderedMap[K, V]) mustGet(key K) V {
 	val, ok := o.get(key)
 	if !ok {
 		panic("key can't be found")
@@ -69,7 +69,7 @@ func (o *orderedMap[K, V]) len() int {
 	return len(o.data)
 }
 
-func (o *orderedMap[K, V]) Keys() []K {
+func (o *orderedMap[K, V]) keys() []K {
 	keys := make([]K, 0, len(o.data))
 
 	e := o.l.front()
