@@ -541,3 +541,51 @@ func TestNewSection(t *testing.T) {
 		})
 	}
 }
+
+func TestKeys(t *testing.T) {
+	var options = []struct {
+		key  string
+		vals []interface{}
+	}{
+		{
+			key:  "foo.bar",
+			vals: []any{1, 2, 3},
+		},
+		{
+			key:  "bar.foo",
+			vals: []any{1},
+		},
+		{
+			key:  "foo.bar.bar",
+			vals: []any{"a"},
+		},
+		{
+			key:  "aa.bb",
+			vals: []any{"a"},
+		},
+		{
+			key:  "bb.aa",
+			vals: []any{"b"},
+		},
+	}
+	gc := New()
+
+	for i := range options {
+		err := gc.Set(options[i].key, options[i].vals...)
+		if err != nil {
+			t.Fatalf("GitConfig.Set() = %s, want %v", err, nil)
+		}
+	}
+
+	keys := gc.Keys()
+
+	if len(keys) != len(options) {
+		t.Errorf("len(keys) = %d, want %d", len(keys), len(options))
+	}
+
+	for i := range keys {
+		if keys[i].String() != options[i].key {
+			t.Errorf("keys[%d] = %s, want %s", i, keys[i].String(), options[i].key)
+		}
+	}
+}
