@@ -75,6 +75,17 @@ func (vn VariableName) isValid() bool {
 	})
 }
 
+// Key represents key of a variable. It consists of
+// section, subsection (if any), and variable name.
+type Key struct {
+	Section Section
+	Name    VariableName
+}
+
+func (k Key) String() string {
+	return fmt.Sprintf("%s.%s", k.Section.DottedString(), k.Name)
+}
+
 // Value represents value of a config variable.
 type Value struct{ v interface{} }
 
@@ -309,7 +320,7 @@ func (g GitConfig) GetAll(key string) ([]Value, error) {
 	return data, nil
 }
 
-// Set assigns the provided values to a given key. If the key already exists, the current value is
+// Set assigns vals to a given key. If the key already exists, the current value is
 // replaced. To add new values to an existing key, use Add().
 func (g *GitConfig) Set(key string, vals ...interface{}) error {
 	if len(vals) == 0 {
@@ -331,7 +342,7 @@ func (g *GitConfig) Set(key string, vals ...interface{}) error {
 	return nil
 }
 
-// Add appends (or creates if it doesn't exists yet) the provided values to a given key
+// Add appends (or creates if it doesn't exists yet) the vals to a given key.
 func (g *GitConfig) Add(key string, vals ...interface{}) error {
 	if len(vals) == 0 {
 		return ErrEmptyValue
@@ -352,9 +363,9 @@ func (g *GitConfig) Add(key string, vals ...interface{}) error {
 	return nil
 }
 
-// Unset removes given key. If the section contains only one key,
-// the section is removed, if it contains more than one key,
-// only the given key is removed
+// Unset removes given key from config file. If the section contains only one variable,
+// the section is removed, if it contains more than one variables,
+// only variable with the given key is removed.
 func (g *GitConfig) Unset(key string) error {
 	section, varName, err := g.splitKey(key)
 	if err != nil {
@@ -369,8 +380,8 @@ func (g *GitConfig) Unset(key string) error {
 	return nil
 }
 
-// Save writes the current configuration to the specified path.
-// If the file already exists, it is overwritten.
+// Save writes the current configuration to path.
+// If the file already exists, it will be overwritten.
 func (g GitConfig) Save(path string) error {
 	f, err := os.Create(path)
 	if err != nil {
@@ -399,21 +410,18 @@ func (g GitConfig) Save(path string) error {
 	return nil
 }
 
-type Key struct {
-	Section Section
-	Name    VariableName
-}
-
-func (k Key) String() string {
-	return fmt.Sprintf("%s.%s", k.Section.DottedString(), k.Name)
-}
-
+// Keys returns slice of all keys in the order they're
+// inserted.
 func (g GitConfig) Keys() []Key {
 	keys := make([]Key, 0)
 
 	for _, section := range g.data.keys() {
-		keys = append(keys, make([]Key, 0, g.data.len())...)
-		for _, name := range g.data.mustGet(section).keys() {
+		variables := g.data.mustGet(section)
+		if cap(keys)-len(keys) < variables.len() {
+			keys = append(keys[:cap(keys)], make([]Key, variables.len())...)[:len(keys)]
+		}
+
+		for _, name := range variables.keys() {
 			keys = append(keys, Key{section, name})
 		}
 	}
