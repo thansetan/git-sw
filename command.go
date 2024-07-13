@@ -13,7 +13,7 @@ type Command struct {
 
 var commands = map[Action]Command{
 	CREATE: {
-		Description: "Create a new config file",
+		Description: "Create a new profile.",
 		Func: func() error {
 			profile, err := displayCreateForm()
 			if err != nil {
@@ -32,7 +32,7 @@ var commands = map[Action]Command{
 		},
 	},
 	USE: {
-		Description: "Select a config file to use",
+		Description: "Select a profile to use.",
 		Func: func() error {
 			if !isGlobal && !isGitDirectory() {
 				return ErrNotGitDirectory
@@ -58,7 +58,7 @@ var commands = map[Action]Command{
 		},
 	},
 	LIST: {
-		Description: "List all available config files",
+		Description: "List all available profiles",
 		Func: func() error {
 			err := displayProfileList(profiles)
 			if err != nil {
@@ -68,7 +68,7 @@ var commands = map[Action]Command{
 		},
 	},
 	EDIT: {
-		Description: "Edit an existing config file in text editor",
+		Description: "Edit an existing profile in text editor.",
 		Func: func() error {
 			var (
 				selected Profile
@@ -99,7 +99,7 @@ var commands = map[Action]Command{
 		},
 	},
 	DELETE: {
-		Description: "Delete an existing config file",
+		Description: "Delete an existing profile.",
 		Func: func() error {
 			var (
 				selected     Profile

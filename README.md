@@ -19,11 +19,11 @@ go install github.com/thansetan/git-sw@latest
 ```text
 usage: git-sw [options] command
 Available commands: 
-  use       Select a config file to use.
-  create    Create a new config file.
-  edit      Edit an existing config file in text editor.
-  delete    Delete an existing config file.
-  list      List all available config files.
+  use       Select a profile to use.
+  create    Create a new profile.
+  edit      Edit an existing profile in text editor.
+  delete    Delete an existing profile.
+  list      List all available profiles.
 
 Available options: 
   -g        Run the command globally (can only be used with the 'use', 'edit', and 'delete' commands).
