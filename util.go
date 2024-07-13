@@ -14,7 +14,7 @@ import (
 
 func hash(s string) (string, error) {
 	h := md5.New()
-	_, err := h.Write([]byte(s))
+	_, err := fmt.Fprint(h, s)
 	if err != nil {
 		return "", err
 	}

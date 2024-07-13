@@ -177,7 +177,7 @@ func displayProfileSelector(profiles []Profile) (Profile, error) {
 
 func displayProfileList(profiles []Profile) error {
 	tw := tabwriter.NewWriter(os.Stdout, 4, 4, 0, ' ', 0)
-	_, err := tw.Write([]byte("List of available profiles:\n"))
+	_, err := fmt.Fprint(tw, "List of available profiles:\n")
 	if err != nil {
 		return err
 	}

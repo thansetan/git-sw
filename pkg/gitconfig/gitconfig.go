@@ -391,7 +391,7 @@ func (g GitConfig) Save(path string) error {
 
 	sections := g.data.keys()
 	for i := range sections {
-		_, err = f.WriteString(fmt.Sprintf("%s\n", sections[i]))
+		_, err = fmt.Fprintf(f, "%s\n", sections[i])
 		if err != nil {
 			return err
 		}
@@ -399,7 +399,7 @@ func (g GitConfig) Save(path string) error {
 		for j := range variables {
 			values := g.data.mustGet(sections[i]).mustGet(variables[j])
 			for k := range values {
-				_, err = f.WriteString(fmt.Sprintf("\t%s = %v\n", variables[j], values[k].Value()))
+				_, err = fmt.Fprintf(f, "\t%s = %v\n", variables[j], values[k].Value())
 				if err != nil {
 					return err
 				}

@@ -133,6 +133,7 @@ func (c *configFile) parse() (*GitConfig, error) {
 	)
 	gc := New()
 
+loop:
 	for !c.eof {
 		c.trimSpaceLeft()
 		switch c.getType() {
@@ -158,7 +159,7 @@ func (c *configFile) parse() (*GitConfig, error) {
 		case comment, end:
 			err = c.toEndOfLine()
 			if err != nil {
-				break
+				break loop
 			}
 		default:
 			return nil, &ParseError{
