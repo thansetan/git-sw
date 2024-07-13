@@ -46,7 +46,7 @@ func main() {
 		errorAndExit(err)
 	}
 	saveDirPath = filepath.Join(userConfigDir, saveDirName)
-	err = os.MkdirAll(saveDirPath, 0744)
+	err = os.MkdirAll(saveDirPath, 0o744)
 	if err != nil {
 		errorAndExit(err)
 	}
