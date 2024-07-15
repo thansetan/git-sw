@@ -8,13 +8,14 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 )
 
 func hash(s string) (string, error) {
 	h := md5.New()
-	_, err := fmt.Fprint(h, s)
+	_, err := fmt.Fprint(h, strings.ToLower(s))
 	if err != nil {
 		return "", err
 	}
