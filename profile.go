@@ -28,7 +28,7 @@ func getProfilePath(profileName string) (string, error) {
 }
 
 func saveProfile(dirPath string, profileName string, config *gitconfig.GitConfig) (err error) {
-	err = os.MkdirAll(dirPath, 0744)
+	err = os.MkdirAll(dirPath, 0o744)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func saveProfile(dirPath string, profileName string, config *gitconfig.GitConfig
 		if err != nil {
 			errDel := os.RemoveAll(dirPath)
 			if errDel != nil {
-				fmt.Printf("error deleting directory: %s", dirPath)
+				fmt.Printf("error removing directory: %s", dirPath)
 			}
 		}
 	}()
@@ -53,7 +53,7 @@ func saveProfile(dirPath string, profileName string, config *gitconfig.GitConfig
 	if err != nil {
 		return err
 	}
-	err = f.Chmod(0444)
+	err = f.Chmod(0o444)
 	if err != nil {
 		return err
 	}
@@ -62,9 +62,7 @@ func saveProfile(dirPath string, profileName string, config *gitconfig.GitConfig
 }
 
 func copyDefault() error {
-	var (
-		defaultConf *gitconfig.GitConfig
-	)
+	var defaultConf *gitconfig.GitConfig
 	dirName, err := getProfilePath(defaultConfigName)
 	if err != nil {
 		return err
@@ -77,12 +75,19 @@ func copyDefault() error {
 	if err != nil {
 		return err
 	}
-	configContent, err := os.ReadFile(filepath.Join(homeDir, ".gitconfig"))
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	configPath := filepath.Join(homeDir, ".gitconfig")
+
+	configContent, err := os.ReadFile(configPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			defaultConf = gitconfig.New()
+			err = defaultConf.Save(configPath)
+			if err != nil {
+				return err
+			}
+			goto saveProfile
+		}
 		return err
-	} else if errors.Is(err, os.ErrNotExist) {
-		defaultConf = gitconfig.New()
-		goto saveProfile
 	}
 	defaultConf, err = gitconfig.Parse(configContent)
 	if err != nil {
@@ -108,12 +113,12 @@ func getCurrentProfile() (string, error) {
 	}
 	profileFile, err := os.Open(filepath.Join(profileDir, "profile"))
 	if err != nil {
-		return "", err
+		return "default", err
 	}
 	defer profileFile.Close()
 	profileName, err := io.ReadAll(profileFile)
 	if err != nil {
-		return "", err
+		return "default", err
 	}
 
 	return string(profileName), nil
@@ -122,7 +127,7 @@ func getCurrentProfile() (string, error) {
 func getProfiles(configPath string) ([]Profile, error) {
 	var profiles []Profile
 	currProfile, err := getCurrentProfile()
-	if err != nil {
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
 	err = filepath.WalkDir(configPath, func(path string, d fs.DirEntry, err error) error {

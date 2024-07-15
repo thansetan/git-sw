@@ -58,7 +58,7 @@ var commands = map[Action]Command{
 		},
 	},
 	LIST: {
-		Description: "List all available profiles",
+		Description: "List all available profiles.",
 		Func: func() error {
 			err := displayProfileList(profiles)
 			if err != nil {
