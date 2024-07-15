@@ -27,6 +27,12 @@ func displayCreateForm() (Profile, error) {
 	)
 	profile.Config = gitconfig.New()
 
+	profileMap := make(map[string]struct{})
+
+	for i := range profiles {
+		profileMap[strings.ToLower(profiles[i].Name)] = struct{}{}
+	}
+
 	profileNamePrompt := promptui.Prompt{
 		Label: "Name",
 		Validate: func(s string) error {
@@ -34,12 +40,7 @@ func displayCreateForm() (Profile, error) {
 			if err != nil {
 				return err
 			}
-			profilePath, err := getProfilePath(s)
-			if err != nil {
-				return err
-			}
-			_, err = os.Stat(profilePath)
-			if err == nil {
+			if _, ok := profileMap[strings.ToLower(s)]; ok {
 				return ErrDuplicateProfile
 			}
 			return nil
