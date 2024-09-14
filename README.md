@@ -1,4 +1,4 @@
-<h1 align="center">git sw</h1>
+<h1 align="center">Git Sw(itch)</h1>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/e08c8a1d-c00e-4aa8-b31f-338dea710bf7" alt="git-sw demo"/>
